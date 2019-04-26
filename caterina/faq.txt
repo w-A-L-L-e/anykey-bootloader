@@ -1,0 +1,86 @@
+FAQ.
+
+1. You had a working AnyKey already way back in 2011. What were you up to in the past years?
+
+Back then the eco system for aspiring inventors was a lot more daunting. To get hardware produced we
+estimated a minimal investment of €50,000 to get an initial batch produced. We also had stability issues to solve
+and we didn't support windows yet. Back then our hardware was based on the attiny85 and VUSB stack.
+Both the firmware and hardware have been upgraded since then. And also financially we're in a more comfortable place
+to have the spare time and assets to make this happen.
+
+
+
+2. So what improvements have you made since 2011?
+
+On the hardware side we moved to the atmega32u4 because it supports USB natively and we found a better contact
+to get our first batch of AnyKey pcb's and enclosures at a much more affordable price. On the software side
+the Configurator GUI's were written for Mac OS and Windows. We also improved the firmware to make it work reliably on
+Windows 10, most recent linux distributions (Ubuntu, Debian, RedHat etc.) and OS X High Sierra and Mojave.
+One of our goals is to also make the configurator GUI for Linux available (as currently we only have the text based anykey_save
+tool for that platform). Basically all features work already in Linux, we just miss a GUI and this is also part of this kickstarter's goals.
+
+
+
+3. What about the U2F Fido firmware, how on earth will you accomplish this complex task?
+
+We will start developing on this when we hit the 10k mark. We will use the uecc open source library 
+for the key agreement protocol (ECDH) together with sha256 and some raw hid libraries. Most of these
+can be found on github already and any changes we make we will submit as pull requests.
+
+We already tested that uecc performs reliably on our hardware and tested RawHID and the sha256 algorithm implementation
+for our current specific microprocessor atmega32u4. We now need to combine these into our firmware and this final development 
+work is part of our kickstarter goals. Is this easy? no. Is it doable? Yes definately. Walter Schreppers has a Master's Degree in 
+Computer Science and plenty of C++ experience to make this a reality, otherwise we would not have stated this in our goals.
+
+
+
+4. But how on earth do you plan on making something like other companies XYZ that spends hundreds of thousands of dollars on U2F tokens? And similar rants/trolling.
+
+Stop trolling! We know we can do it, otherwise we wouldn't have started a kickstarter campaign. 
+If you think something is impossible well that's your problem, just don't back us and pay more money for a product from a competitor. 
+What's not ok is trolling in the comment section and spread negative remarks like : this is nothing new because company XYZ sells something similar for 3 times the price.
+
+Remarks like :this is 10 years old tech. because you glanced over some features and decided you saw something similar in the past. 
+The technology is brand new, our latest firmware is from 2019 and still improving on a regular basis. The hardware was totally revamped in 2017-2018
+and after a successfull kickstarter we will end up with an awesome product and features that did not exist yet before this campaign started.
+Sorry for the above rant, but it seemed necessary for some backers because they felt the need to 'warn others' about their 'concerns' about what we can accomplish 'according to their estimation'.
+
+For one thing even if we only barely hit our 5k mark you'll still receive an AnyKey that does both HID keyboard password entry and is super user friendly to use.
+You can just change it by clicking on a 'save' button.  You don't need programming experience, knowledge about microcontrollers or installing an entire compiler suite
+to work with AnyKey. Getting the AnyKey Configurator GUI and firmware working together to make this process so simple and user friendly is part of our hard work alread done
+in the past.
+
+Secondly, the same device can be switched to operate in different modes by switching firmwares. Also the process of changing firmwares is something we will make user friendly and
+easy to use. When changing to the upcoming U2F fido firmware the AnyKey device becomes a working U2f dongle on the fly.
+Thirdly, other and more features will be added also, depending on amount of backers. 
+
+For details keep an eye on the goals that we will update as the campaign further matures.
+
+
+5. How far is the current firmware, hardware and software progressed?
+
+Basically we're already at the MVP point today. We know we can order our hardware in large batches and we have acquired the know how and expertise over
+the past years to make this campaign a reality. However this campaign allows us to polish any rough edges and depending on the amount of backers either do one extra firmware
+or 2 or more with loads of new features. More details are described in our goals that will update depending on the available campaign funding.
+
+
+6. What about backups?
+
+We advise you to either get a second AnyKey (just like you do with a house key) to guard you against loss. Or you could opt to use some other method of saving your password somewhere else (good old
+hard-copy on paper is not such a bad idea if your budget is too small for 2 keys). We can and will most likely provide a way to export your data encrypted to a file. You can then choose to store that
+in the cloud somewhere you want like dropbox or whatnot. However we do not recommend storing it in the cloud as this is your 'golden key' that should give you access to everything, it's best left offlinne.
+
+7. What about my private data, will it be stored in the cloud or on your servers?
+
+No! You don't need to worry about that. AnyKey does not save any password to an online server nor does it save any of your private information on an online server. We only use a server to validate your product activation code, during the setup process to validate your purchase. 
+
+8. Does it work without internet?
+
+Yes it does. After activation you can use AnyKey as much as you like without the need for internet connectivity.
+
+9. Does it work on ancient/old computers?
+
+Anything produced after 2005 with USB will most likely work if you install a recent Windows or OS X or Linux on it.
+
+
+
