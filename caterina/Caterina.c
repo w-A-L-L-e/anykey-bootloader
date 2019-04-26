@@ -61,6 +61,8 @@ static bool RunBootloader = true;
 uint16_t TxLEDPulse = 0; // time remaining for Tx LED pulse
 uint16_t RxLEDPulse = 0; // time remaining for Rx LED pulse
 
+static bool firmwareUnlocked = false;
+
 /* Bootloader timeout timer */
 #define TIMEOUT_PERIOD	8000
 uint16_t Timeout = 0;
@@ -337,23 +339,8 @@ static void ReadWriteMemoryBlock(const uint8_t Command)
 	else{ 
 		uint32_t PageStartAddress = CurrAddress;
     
-    //block write here until a shared secret is matched, later we will most likely change this into a handshake
-    uint32_t unlock_hash[32]={
-      0x31, 0x44, 0x41, 0x31, 0x8a, 0x3f, 0x3b, 0xd9,
-      0x68, 0x14, 0xa1, 0xd4, 0x2a, 0xbf, 0x4b, 0xab,
-      0x41, 0xa4, 0xef, 0xc9, 0xca, 0xff, 0x6b, 0x3d,
-      0x33, 0xf4, 0x4e, 0xa3, 0x2a, 0xaf, 0x7b, 0xc1,
-    };
-    uint32_t c, ui=0;
-    while( ui++ < 256 ){
-      c=FetchNextCommandByte();
-      if( c!=unlock_hash[ui] ) {
-        WriteNextResponseByte(0x01); //signal fail to avrdude
-        return; //unlock_hash fail
-      }
-      WriteNextResponseByte(0x00); //signal ok for next unlock byte
-    }
-
+    //check unlock flag
+    if( !firmwareUnlocked ) return;
 
 		if (MemoryType == 'F')
 		{
@@ -535,6 +522,26 @@ void CDC_Task(void)
 		// Indicate auto-address increment is supported 
 		WriteNextResponseByte('Y');
 	}
+  else if (Command == 'K' )
+  {
+    //block write here until a shared secret is matched, later we will most likely change this into a handshake
+    uint32_t unlock_hash[32]={
+      0x31, 0x44, 0x41, 0x31, 0x8a, 0x3f, 0x3b, 0xd9,
+      0x68, 0x14, 0xa1, 0xd4, 0x2a, 0xbf, 0x4b, 0xab,
+      0x41, 0xa4, 0xef, 0xc9, 0xca, 0xff, 0x6b, 0x3d,
+      0x33, 0xf4, 0x4e, 0xa3, 0x2a, 0xaf, 0x7b, 0xc1,
+    };
+    uint32_t c, ui=0;
+    while( ui++ < 256 ){
+      c=FetchNextCommandByte();
+      if( c!=unlock_hash[ui] ) {
+        WriteNextResponseByte(0x01); //signal fail to avrdude
+        return; //unlock_hash fail
+      }
+      WriteNextResponseByte(0x00); //signal ok for next unlock byte
+    }
+    firmwareUnlocked = true; // matic unlock ok
+  }
 	else if (Command == 'A')
 	{
 		// Set the current address to that given by the host 
