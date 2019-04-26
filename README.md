@@ -65,8 +65,18 @@ We're now ready to make our modifications and most likely release a seperate fol
 In the original arduino git the lufa libraries are referenced and needed tracking down to be able to do a succesful build.
 Furthermore the hex file now needs to be prepended with a minimal sketch and combined in a full 32k image for flashing.
 
-We've put a config and example of flashing in the avrdude folder. Avrdude is a free tool to write firmware.hex files to microcontrollers.
-You can download that here:
-https://github.com/sigmike/avrdude
+## Burning new bootloader
+Basically means flashing to atmega32u4 with avrdude. We've put a config and example of flashing in the avrdude folder. 
+Avrdude is a free tool to write firmware.hex files to microcontrollers.
+You can download avrdude here: https://github.com/sigmike/avrdude
+This needs to be done only once and places the hex file at the end of the microcontrollers memory starting at 0x7000.
 
+Any firmware specific code and security updates after that happen in the beginning of the flash (everything up to 0x7000).
+This is basically how arduino's allow to upload sketches. We can use a similar method to update to newer firmware versions to do so.
+
+Note: this is not used during password changes nor used in the configurator. 
+That writes to the 1kb eeprom and with a different protocol using our anykey_save tool. This is necessary as we don't
+want to use regular flash/program space for each password change and also it's much faster with our current method.
+
+Not only are firmware updates possible now, we can still preserve the users set password salt between updates.
 
