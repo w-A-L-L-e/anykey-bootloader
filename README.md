@@ -1,11 +1,10 @@
 # AnyKey protected bootloader
 
-Work on bootloader will happen here. Any changes we make to these GPL parts we're submitting here.
-Most likely we'll add some encryption and/or handshake before allowing to flash new code to the AnyKey.
-Work in progress.
+Work on the new bootloader will happen here. Any changes we make to these GPL parts we're submitting here for now until we've hit a stable
+version. The current version works fine as to be expected but we've got some features planned to add here.
+We need either a handshake or just a simple shared secret to block unwanted flashing to be added.
 
-Meanwhile visit our kickstarter pages here:
-
+Meanwhile visit our kickstarter pages for any updates here:
 https://www.kickstarter.com/projects/715415099/anykey-the-usb-password-key
 
 
@@ -65,9 +64,5 @@ We're now ready to make our modifications and most likely release a seperate fol
 
 In the original arduino git the lufa libraries are referenced and needed tracking down to be able to do a succesful build.
 Furthermore the hex file now needs to be prepended with a minimal sketch and combined in a full 32k image for flashing.
-
-
-
-
 
 
