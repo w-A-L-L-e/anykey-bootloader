@@ -72,11 +72,13 @@ You can download avrdude here: https://github.com/sigmike/avrdude
 This needs to be done only once and places the hex file at the end of the microcontrollers memory starting at 0x7000.
 
 Any firmware specific code and security updates after that happen in the beginning of the flash (everything up to 0x7000).
-This is basically how arduino's allow to upload sketches. We can use a similar mechanism to update to newer firmware versions to allow security updates.
+This is basically how arduino's allow to upload sketches. We can use a similar mechanism to upgrade to newer firmware versions to allow security updates.
 
-Note: this is not used during password changes nor used in the configurator. 
-That writes to the 1kb eeprom and with a different protocol using our anykey_save tool. This is necessary as we don't
-want to use regular flash/program space for each password change and also it's much faster with our current method.
+Not only are firmware updates possible now, we can still preserve the users set password salt between updates as these are stored in a seperate
+eeprom not affected by the firmware updates.
+The configurator will eventually have a stripped down version of the above avrdude tool to allow security updates to the AnyKey dongle itself.
+Right now we however need to already prepare this so we can ship earlier and improve after the devices are spread into the world.
+The locking of page write needs to happen so that tampering is not possible anymore. Basically only if you know the unlock hash you're allowed to write.
 
-Not only are firmware updates possible now, we can still preserve the users set password salt between updates.
+
 
