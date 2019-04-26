@@ -65,4 +65,8 @@ We're now ready to make our modifications and most likely release a seperate fol
 In the original arduino git the lufa libraries are referenced and needed tracking down to be able to do a succesful build.
 Furthermore the hex file now needs to be prepended with a minimal sketch and combined in a full 32k image for flashing.
 
+We've put a config and example of flashing in the avrdude folder. Avrdude is a free tool to write firmware.hex files to microcontrollers.
+You can download that here:
+https://github.com/sigmike/avrdude
+
 
