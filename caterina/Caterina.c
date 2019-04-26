@@ -563,6 +563,10 @@ void CDC_Task(void)
 		// Send confirmation byte back to the host 
 		WriteNextResponseByte('\r');
 	}
+
+  // To be tested this weekend and bugfixed if necessary.
+  // it would be nice to allow setting lock bits from within the configurator and not
+  // rely on factory settings
 	#if !defined(NO_LOCK_BYTE_WRITE_SUPPORT)
 	else if (Command == 'l')
 	{

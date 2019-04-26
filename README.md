@@ -57,8 +57,14 @@ Data:        188 bytes (7.3% Full)
 
 ```
 
-So this compiles already, we're now ready to make our modifications and most likely release a seperate folder for anykey specific much like the lilypad has done in the past...
-We've included the correct lufa version that is necessary to compile easily. In the original arduino git this is referenced and to be downloaded seperately.
+So this compiles already and generates our bootloader hex with a more recent avr-gcc than the previous releases.
+We adjusted the makefile, and added the lufa libraries with correct version for it to compile with a simple make in the Caterina folder.
+We're now ready to make our modifications and most likely release a seperate folder for anykey specific code much like the lilypad has done in the past.
+
+In the original arduino git the lufa libraries are referenced and needed tracking down to be able to do a succesful build.
+Furthermore the hex file now needs to be prepended with a minimal sketch and combined in a full 32k image for flashing.
+
+
 
 
 

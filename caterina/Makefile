@@ -111,9 +111,11 @@ F_USB = $(F_CPU)
 FLASH_SIZE_KB        = 32
 BOOT_SECTION_SIZE_KB = 4
 
-#BOOT_START           = 0x$(shell echo "obase=16; ($(FLASH_SIZE_KB) - $(BOOT_SECTION_SIZE_KB)) * 1024" | bc)
-# which is just hex for 32-4==28*1024 == 28672 and in hex that is 0x7000
-BOOT_START = 0x7000
+#######
+# BOOT_START           = 0x$(shell echo "obase=16; ($(FLASH_SIZE_KB) - $(BOOT_SECTION_SIZE_KB)) * 1024" | bc)
+#	which is just hex for 32-4==28*1024 == 28672 and in hex that is 0x7000
+#	as we only target AnyKey devices in future just using a fixed boot start is ok here (and this compiles with less dependencies bc, bash etc not necessary)
+BOOT_START 						= 0x7000
 
 
 # Output format. (can be srec, ihex, binary)
@@ -130,15 +132,8 @@ TARGET = Caterina
 OBJDIR = .
 
 
-# Path to the LUFA library
-#LUFA_PATH = ../../../../../../LUFA/LUFA-111009
+# Path to the LUFA library added to this repo, so now a simple relative path works.
 LUFA_PATH = ../lufa-LUFA-111009
-
-# first run needs absolute
-#LUFA_PATH = /Users/wschrep/AnyKey/BOOTLOADER/lufa-LUFA-111009
-
-#second run only works with relative
-#LUFA_PATH = ~/AnyKey/BOOTLOADER/lufa-LUFA-111009
 
 
 # LUFA library compile-time options and predefined tokens
@@ -154,10 +149,11 @@ LUFA_OPTS += -D NO_DEVICE_SELF_POWER
 LUFA_OPTS += -D NO_DEVICE_REMOTE_WAKEUP
 LUFA_OPTS += -D NO_SOF_EVENTS
 
+# subject to change in next version:
 #LUFA_OPTS += -D NO_BLOCK_SUPPORT
 #LUFA_OPTS += -D NO_EEPROM_BYTE_SUPPORT
 #LUFA_OPTS += -D NO_FLASH_BYTE_SUPPORT
-LUFA_OPTS += -D NO_LOCK_BYTE_WRITE_SUPPORT
+LUFA_OPTS += -D NO_LOCK_BYTE_WRITE_SUPPORT #current implementation does not allow lockbits to be set. room for improvement possible here
 
 
 # Create the LUFA source path variables by including the LUFA root makefile
@@ -165,9 +161,9 @@ include $(LUFA_PATH)/LUFA/makefile
 
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = $(TARGET).c                                                 \
-	  Descriptors.c                                               \
-	  $(LUFA_SRC_USB)                                             \
+SRC = $(TARGET).c          \
+	  Descriptors.c          \
+	  $(LUFA_SRC_USB)        \
 
 
 # List C++ source files here. (C dependencies are automatically generated.)
