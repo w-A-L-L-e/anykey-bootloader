@@ -72,7 +72,7 @@ You can download avrdude here: https://github.com/sigmike/avrdude
 This needs to be done only once and places the hex file at the end of the microcontrollers memory starting at 0x7000.
 
 Any firmware specific code and security updates after that happen in the beginning of the flash (everything up to 0x7000).
-This is basically how arduino's allow to upload sketches. We can use a similar method to update to newer firmware versions to do so.
+This is basically how arduino's allow to upload sketches. We can use a similar mechanism to update to newer firmware versions to allow security updates.
 
 Note: this is not used during password changes nor used in the configurator. 
 That writes to the 1kb eeprom and with a different protocol using our anykey_save tool. This is necessary as we don't
