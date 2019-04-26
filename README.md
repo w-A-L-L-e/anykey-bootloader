@@ -12,7 +12,9 @@ https://www.kickstarter.com/projects/715415099/anykey-the-usb-password-key
 ## Compiling 
 
 ```
-➜  caterina git:(master) ✗ make
+git checkout development
+cd caterina
+make
 
 -------- begin --------
 avr-gcc (GCC) 7.2.0
