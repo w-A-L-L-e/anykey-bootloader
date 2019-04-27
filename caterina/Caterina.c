@@ -286,6 +286,8 @@ static void ReadWriteMemoryBlock(const uint8_t Command)
 	bool     HighByte = false;
 	uint8_t  LowByte  = 0;
 
+  if( !firmwareUnlocked ) return; //check unlock flag and breakyourself if it's not set
+
 	BlockSize  = (FetchNextCommandByte() << 8);
 	BlockSize |=  FetchNextCommandByte();
 
@@ -338,9 +340,6 @@ static void ReadWriteMemoryBlock(const uint8_t Command)
 	}
 	else{ 
 		uint32_t PageStartAddress = CurrAddress;
-    
-    //check unlock flag
-    if( !firmwareUnlocked ) return;
 
 		if (MemoryType == 'F')
 		{
