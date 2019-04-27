@@ -532,13 +532,13 @@ void CDC_Task(void)
     };
 
     uint32_t c=0, ui=0;
-    while( ui < 32 ){ //sizeof(unlock_hash)/sizeof(unlock_hash[0]);
+    while( ui < 32 ){                 // iterate all bytes: sizeof(unlock_hash)/sizeof(unlock_hash[0]);
       c=FetchNextCommandByte();
       if( c != unlock_hash[ui++] ) {
-        WriteNextResponseByte(0x01); //signal fail to avrdude
-        return; //unlock_hash fail
+        WriteNextResponseByte(0x01);  // signal fail to avrdude
+        return;                       // unlock_hash fail
       }
-      WriteNextResponseByte(0x00); //signal ok for next unlock byte
+      WriteNextResponseByte(0x00);    // signal ok for next unlock byte
     }
     firmwareUnlocked = true;
   }
