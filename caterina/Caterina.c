@@ -536,11 +536,11 @@ void CDC_Task(void)
       c=FetchNextCommandByte();
       if( c != unlock_hash[ui++] ) {
         WriteNextResponseByte(0x01);  // signal fail to avrdude
-        return;                       // unlock_hash fail
+        break;                        // unlock_hash fail
       }
       WriteNextResponseByte(0x00);    // signal ok for next unlock byte
     }
-    firmwareUnlocked = true;
+    firmwareUnlocked = (ui==32);      // unlock if no fails but also signal end of transfer
   }
 	else if (Command == 'A')
 	{
