@@ -715,6 +715,9 @@ doxygen:
 clean_doxygen:
 	rm -rf Documentation
 
+dump:
+	avr-objdump -s -m avr35 $(TARGET).hex > $(TARGET).dump
+
 checksource:
 	@for f in $(SRC) $(CPPSRC) $(ASRC); do \
 		if [ -f $$f ]; then \
