@@ -61,7 +61,7 @@ static bool RunBootloader = true;
 uint16_t TxLEDPulse = 0; // time remaining for Tx LED pulse
 uint16_t RxLEDPulse = 0; // time remaining for Rx LED pulse
 
-static bool firmwareUnlocked = false;
+static bool firmwareLocked = true;
 
 /* Bootloader timeout timer */
 #define TIMEOUT_PERIOD	8000
@@ -286,7 +286,9 @@ static void ReadWriteMemoryBlock(const uint8_t Command)
 	bool     HighByte = false;
 	uint8_t  LowByte  = 0;
 
-  if( !firmwareUnlocked ) return; //check unlock flag and breakyourself if it's not set
+  #ifdef FIRMWARE_BOOTLOCK_ACTIVE
+  if( firmwareLocked ) return; //check unlock flag and breakyourself if it's not set
+  #endif
 
 	BlockSize  = (FetchNextCommandByte() << 8);
 	BlockSize |=  FetchNextCommandByte();
@@ -532,21 +534,18 @@ void CDC_Task(void)
     };
 
     uint8_t c=0, ui=0;
+    bool lockFail=false;
     while( ui < 16 ){                 // iterate all bytes: sizeof(unlock_hash)/sizeof(unlock_hash[0]);
       c=FetchNextCommandByte();
       if( c != unlock_hash[ui] ) {
-        break;                        // unlock_hash fail
+        lockFail=true;
       }
-      WriteNextResponseByte(0x00);    // signal ok for next unlock byte
-      ui++;
+      WriteNextResponseByte(0x01);    // signal ok for next unlock byte
+      ui++; //next byte
     }
-    if(ui==16){
-      firmwareUnlocked = true;
-    }
-    else{
-      WriteNextResponseByte(0x01);  // signal fail to avrdude
-    }
-    
+    // always read our 16 bytes and only decide to unlock at the end
+    // otherwise some tricks can be done to figure out which bytes failed/worked on pc side
+    firmwareLocked = lockFail || (ui!=16);
   }
 	else if (Command == 'A')
 	{
@@ -581,6 +580,11 @@ void CDC_Task(void)
 	}
 	else if (Command == 'e')
 	{
+
+    #ifdef FIRMWARE_BOOTLOCK_ACTIVE
+    if( firmwareLocked ) return; //check unlock flag and breakyourself if it's not set
+    #endif
+
 		// Clear the application section of flash 
 		for (uint32_t CurrFlashAddress = 0; CurrFlashAddress < BOOT_START_ADDR; CurrFlashAddress += SPM_PAGESIZE)
 		{
