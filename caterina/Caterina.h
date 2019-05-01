@@ -59,7 +59,7 @@
 		#define BOOTLOADER_HWVERSION_MAJOR   0x01
 
 		/** Hardware version minor of the CDC bootloader. */
-		#define BOOTLOADER_HWVERSION_MINOR   0x00
+		#define BOOTLOADER_HWVERSION_MINOR   0x03 //0x00
 
 		/** Eight character bootloader firmware identifier reported to the host when requested */
 		#define SOFTWARE_IDENTIFIER          "CATERINA"
