@@ -59,11 +59,10 @@
 		#define BOOTLOADER_HWVERSION_MAJOR   0x01
 
 		/** Hardware version minor of the CDC bootloader. */
-		#define BOOTLOADER_HWVERSION_MINOR   0x03 //0x00
+		#define BOOTLOADER_HWVERSION_MINOR   0x00
 
 		/** Eight character bootloader firmware identifier reported to the host when requested */
-		//#define SOFTWARE_IDENTIFIER          "CATERINA"
-		  #define SOFTWARE_IDENTIFIER          "JUANITA"
+		#define SOFTWARE_IDENTIFIER          "ANYKEY "
 		
 		#define CPU_PRESCALE(n)	(CLKPR = 0x80, CLKPR = (n))
 		#define LED_SETUP()		DDRC |= (1<<7); DDRB |= (1<<0); DDRD |= (1<<5);
@@ -89,13 +88,16 @@
 	/* Function Prototypes: */
 		void StartSketch(void);
 		void LEDPulse(void);
+
+    void xdelay(int);
+    void blink(void);
 	
 		void CDC_Task(void);
 		void SetupHardware(void);
 
 		void EVENT_USB_Device_ConfigurationChanged(void);
 
-		#if defined(INCLUDE_FROM_CATERINA_C) || defined(__DOXYGEN__)
+		#if defined(INCLUDE_FROM_ANYKEY_C) || defined(__DOXYGEN__)
 			#if !defined(NO_BLOCK_SUPPORT)
 			static void    ReadWriteMemoryBlock(const uint8_t Command);
 			#endif
