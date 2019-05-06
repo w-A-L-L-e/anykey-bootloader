@@ -75,5 +75,34 @@ The file you want to flash is anykey/anykey_bootloader.hex.
 The configurator will eventually have a stripped down version of the above avrdude tool to allow security updates to the AnyKey dongle itself that are only
 allowed to be official signed hex files that way you can't brick your anykey and you can rest assured it hasn't been tampered with.
 
+## Warning
+When using this first test your lock/unlock procedure with either Serial.print's like done above before actually writing to your eeprom. 
+Once you lock the bootloader down you can't change the application (arduino sketch) anymore until you unlock it (and yes it survives power cycles). 
+So make sure you have a way to toggle lock/unlock in some way. This can be with a button, switch, or like in the example a simple serial message or 
+any elaborate challenge-response or proprietary way you can think off. Basically the anykey_bootloader applies the same versatile way of locking that is done
+with LB1 and LB2 for external programming but using an eeprom byte instead of a fuse.
 
+Worst case if you do lock yourself out due to some bug you can indeed do a chip erase and then reflash bootloader+sketch (that is debugged 
+or one that leaves pos 1023 at 0xFF ). The cool thing is you see that only way out is erasing the entire chip with an external programmer 
+and therefore also the secured information you want to protect. For our anykey device we're contemplating of even setting SPIEN off once the
+firmware is deemed stable enough. That way you can only use HVP to reset but that requires desoldering the smd chip and having professional equipment and
+skills. And it would only allow you to reset it to a blank so most likely you'd be quicker with just replacing the chip in this case or calling it a 'brick' ;).
+The thing is even with SPIEN off and LB1+LB2 you can still update. You need to just always be able to set your toggle byte correctly after which the bootloader is still
+allowed to update application space.
 
+Feel free to comment or suggest improvements.
+
+Original Caterina bootloader:
+Copyright ?
+
+LUFA library used for USB communication:
+Copyright 2011  Dean Camera
+
+Derived anykey_bootloader (MIT-license):
+Copyright 2019 Walter Schreppers
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
