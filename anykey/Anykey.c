@@ -170,20 +170,19 @@ int main(void)
   int bootlockAddress = 1023;
   uint8_t bootlockCode = eeprom_read_byte( (uint8_t*)(intptr_t)(bootlockAddress) );
   if( bootlockCode == 187 ){ // bootkill
-    //StartSketch();
-    blink();blink();blink(); 
+    StartSketch();
   }
   if( bootlockCode == 186 ){ // single program
-    eeprom_write_byte( (uint8_t*)(intptr_t)(bootlockAddress), (uint8_t)0x187 ); // bootkill on next restart
-    blink(); blink(); blink(); blink();
+    eeprom_write_byte( (uint8_t*)(intptr_t)(bootlockAddress), 187 ); // bootkill on next restart
   }
   if( bootlockCode == 185 ){ // set lock bits + single program
-    blink(); blink(); blink(); blink(); blink();
-    eeprom_write_byte( (uint8_t*)(intptr_t)(bootlockAddress), (uint8_t)0x187 ); // bootkill on next restart
+    blink(); 
+    eeprom_write_byte( (uint8_t*)(intptr_t)(bootlockAddress), 187 ); // bootkill on next restart
     if (boot_lock_fuse_bits_get(GET_LOCK_BITS)  == 0xFF){
-      boot_lock_bits_set_safe( _BV(0) ); //No Further external programming allowed
-      boot_lock_bits_set_safe( _BV(1) ); //No Further external verification allowed
+      blink(); 
+      boot_lock_bits_set_safe( 0x3c ); // disable programming and reading on external spi!
     }
+    blink(); 
   }
 
 	
