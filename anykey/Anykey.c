@@ -178,9 +178,13 @@ int main(void)
   if( bootlockCode == 185 ){ // set lock bits + single program
     blink(); 
     eeprom_write_byte( (uint8_t*)(intptr_t)(bootlockAddress), 187 ); // bootkill on next restart
-    if (boot_lock_fuse_bits_get(GET_LOCK_BITS)  == 0xFF){
+    if (
+          (boot_lock_fuse_bits_get(GET_LOCK_BITS)  == 0xFF) ||
+          (boot_lock_fuse_bits_get(GET_LOCK_BITS)  == 0x3F)
+       ){
       blink(); 
-      boot_lock_bits_set_safe( 0x3c ); // disable programming and reading on external spi!
+      //boot_lock_bits_set_safe( 0xFC ); // disable programming and reading on external spi!
+      boot_lock_bits_set_safe( 0x3C ); // disable programming and reading on external spi! -> seems like its inverted somehow
     }
     blink(); 
   }
