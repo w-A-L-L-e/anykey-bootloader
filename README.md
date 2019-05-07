@@ -11,6 +11,9 @@ to flash another similar arduino. By protecting the bootloader on the programmer
 trusty programming device that allowed you to flash chips (see examples for full example isp sketch). 
 It's just an example but there are many use cases for a protected lockable bootloader. 
 
+![locking bootloader example](https://user-images.githubusercontent.com/710803/57282308-0e1dd500-70ad-11e9-9dbc-28c5c18eacb0.png)
+
+
 Meanwhile visit our kickstarter pages for any updates here as our anykey needs this to allow upgrades of firmware
 while still blocking all unwanted copies or reads on regular use:
 https://www.kickstarter.com/projects/715415099/anykey-the-usb-password-key
