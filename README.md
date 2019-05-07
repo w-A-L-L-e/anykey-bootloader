@@ -12,7 +12,10 @@ trusty programming device that allowed you to flash chips (see examples for full
 It's just an example but there are many use cases for a protected lockable bootloader. 
 
 ![locking bootloader example](https://user-images.githubusercontent.com/710803/57282308-0e1dd500-70ad-11e9-9dbc-28c5c18eacb0.png)
+Here we unlocked our programmer and this allows updating it's firmware or making changes.
 
+![locking_bootloader_example_2](https://user-images.githubusercontent.com/710803/57282309-0e1dd500-70ad-11e9-879e-bb632ef7e8db.png)
+By just typing L we fully lock the bootloader so you can't accidentally overwrite your master ISP programmer.
 
 Meanwhile visit our kickstarter pages for any updates here as our anykey needs this to allow upgrades of firmware
 while still blocking all unwanted copies or reads on regular use:
