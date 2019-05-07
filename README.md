@@ -1,11 +1,16 @@
 # AnyKey protected bootloader
 
-Work on the new bootloader will happen here. Any changes we make to these GPL parts we're submitting here for now until we've hit a stable
-version. The current version works fine as to be expected but we've got some features planned to add here.
-We need either a handshake or just a simple shared secret to block unwanted flashing to be added.
+This is a modified arduino caterina bootloader that allows itself to be locked and unlocked from the user space
+application (or any arduino sketch).
+
+![anykey_boot_lock](https://user-images.githubusercontent.com/710803/57279189-a6fe2180-70a8-11e9-800c-29a2a3d38ab8.JPG)
+
+By setting the right EEPROM byte you can disable or temporarely enable or fully unlock all bootloader features like
+reading, writing to flash, eeprom, fuses etc.
 
 Meanwhile visit our kickstarter pages for any updates here:
 https://www.kickstarter.com/projects/715415099/anykey-the-usb-password-key
+
 
 
 ## Compiling 
