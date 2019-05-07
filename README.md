@@ -1,7 +1,10 @@
 # AnyKey protected bootloader
 
 This is a modified arduino caterina bootloader that allows itself to be locked and unlocked from the user space
-application (or any arduino sketch).
+application (or any arduino sketch). This was developed to allow automatic upgrades to our AnyKey device
+running on kickstarter now https://www.kickstarter.com/projects/715415099/anykey-the-usb-password-key. But it's
+generic enough to be used on any arduino leonardo or atmega32u4 project as well.
+
 
 ![anykey_boot_lock](https://user-images.githubusercontent.com/710803/57279189-a6fe2180-70a8-11e9-800c-29a2a3d38ab8.JPG)
 
@@ -17,9 +20,6 @@ Here we unlocked our programmer and this allows updating it's firmware or making
 ![locking_bootloader_example_2](https://user-images.githubusercontent.com/710803/57282309-0e1dd500-70ad-11e9-879e-bb632ef7e8db.png)
 By just typing L we fully lock the bootloader so you can't accidentally overwrite your master ISP programmer.
 
-Meanwhile visit our kickstarter pages for any updates here as our anykey needs this to allow upgrades of firmware
-while still blocking all unwanted copies or reads on regular use:
-https://www.kickstarter.com/projects/715415099/anykey-the-usb-password-key
 
 
 ## Compiling 
