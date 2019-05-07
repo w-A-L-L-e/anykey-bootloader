@@ -3,8 +3,7 @@
 This is a modified arduino caterina bootloader that allows itself to be locked and unlocked from the user space
 application (or any arduino sketch).
 
-https://github.com/w-A-L-L-e/anykey-bootloader/issues/1
-
+![anykey_boot_lock](https://user-images.githubusercontent.com/710803/57279189-a6fe2180-70a8-11e9-800c-29a2a3d38ab8.JPG)
 
 By setting the right EEPROM byte you can disable or temporarely enable or fully unlock all bootloader features like
 reading, writing to flash, eeprom, fuses etc.
