@@ -6,11 +6,14 @@ application (or any arduino sketch).
 ![anykey_boot_lock](https://user-images.githubusercontent.com/710803/57279189-a6fe2180-70a8-11e9-800c-29a2a3d38ab8.JPG)
 
 By setting the right EEPROM byte you can disable or temporarely enable or fully unlock all bootloader features like
-reading, writing to flash, eeprom, fuses etc.
+reading, writing to flash, eeprom, fuses etc. In this picture you see an example of an arduino being used as ISP
+to flash another similar arduino. By protecting the bootloader on the programmer ISP you can't accidentally loose your
+trusty programming device that allowed you to flash chips (see examples for full example isp sketch). 
+It's just an example but there are many use cases for a protected lockable bootloader. 
 
-Meanwhile visit our kickstarter pages for any updates here:
+Meanwhile visit our kickstarter pages for any updates here as our anykey needs this to allow upgrades of firmware
+while still blocking all unwanted copies or reads on regular use:
 https://www.kickstarter.com/projects/715415099/anykey-the-usb-password-key
-
 
 
 ## Compiling 
