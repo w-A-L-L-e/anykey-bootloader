@@ -90,6 +90,15 @@ skills. And it would only allow you to reset it to a blank so most likely you'd 
 The thing is even with SPIEN off and LB1+LB2 you can still update. You need to just always be able to set your toggle byte correctly after which the bootloader is still
 allowed to update application space.
 
+## Todos/future work
+Maybe also allow this to run on different atmega's. And try to get this undocumentend LB1 + LB2 setting method to work:
+https://www.avrfreaks.net/forum/changing-lb1-and-lb2-lock-bits-programmatically
+That's currently tried with the 185 value on pos 1023 then it works like the single unlock method + adds setting lb1 and lb2 if they're not set
+yet. Ideal for upgrading devices that have not set the lock bits in factory. This is the only feature currently not working. For our
+usecase/kickstarter we can luckily give the right fuses + lockbits to our supplier, so it's not a showstopper. But if anyone has
+any tips to get our current code actually changing LB1and2 without a programmer feel free to let us know.
+
+
 Feel free to comment or suggest improvements.
 
 Original Caterina bootloader:
