@@ -38,7 +38,8 @@ This uses avrdude and an arduino as isp to get the job done. Feel free to use an
 The flash_fast.sh also sets the lock bits LB1 and LB2 so you cant flash with external ISP anymore etc. You can only undo this by doing a chip
 erase (which is allowed using ISP).
 
-We first wanted to build in a challenge-response type to unlock but we ran out of flash space (bootloader starts at 0x7000 and 
+## How it was done
+We first wanted to build in a challenge-response type protection inside the bootloader itself to unlock but we ran out of flash space (bootloader starts at 0x7000 and 
 current arduino caterina is already close to that). We managed however to squeeze out some bytes with latest avr-gcc and using -Os flags.
 Then we added a way to disable and enable the bootloader from within a sketch by sacrificing one eeprom byte at address 1023 (the last byte).
 This way the sketch can implement any complex or simple scheme to lock and unlock the bootloader depending on the application.
@@ -57,8 +58,7 @@ Another example I bumped into myself is when you use a second arduino as an ISP.
 overwrite the ArduinoISP accidently if you choose the wrong port. One way would be to not use a bootloader on your programmer.
 But that would make it a little cumbersome to update to a newer version (you need a second programmer to program your programmer etc...).
 
-Well in the examples dir is a nice solution useing the anykey bootloader (that works on any arduino compatible device or rather on any
-atmega32u4). You basically first flash the anykey bootloader and then use the modified ISP sketch.
+Well in the examples dir is a nice solution using the anykey bootloader (that works on any arduino leonardo compatible device or rather on any atmega32u4). You basically first flash the anykey bootloader and then use the modified ISP sketch.
 To unlock the bootloader you open a serial window to your ArduinoISP and just enter 'X'. To lock it you enter 'L'.
 The effect is if you lock it then you can't accidently flash your programmer anymore.
 
@@ -80,21 +80,17 @@ void avrisp() {
 ```
 
 ## Burning new bootloader
-Basically means flashing to atmega32u4 with avrdude. We've put a config and example of flashing in the avrdude folder. 
-Avrdude is a free tool to write firmware.hex files to microcontrollers.
-You can download avrdude here: https://github.com/sigmike/avrdude
+Basically means flashing to atmega32u4 with avrdude. We've put a config and example of flashing in the avrdude folder and a flash script in the anykey folder. 
+Avrdude is a free tool to write firmware.hex files to microcontrollers. You can download avrdude here: https://github.com/sigmike/avrdude
 This needs to be done only once and places the hex file at the end of the microcontrollers memory starting at 0x7000.
-The file you want to flash is anykey/anykey_bootloader.hex.
+The file you want to flash is anykey/anykey_bootloader.hex. After this you can lock/unlock the bootloader at any time provided your sketch has some implemented way to alter the eeprom.
 
-The configurator will eventually have a stripped down version of the above avrdude tool to allow security updates to the AnyKey dongle itself that are only
-allowed to be official signed hex files that way you can't brick your anykey and you can rest assured it hasn't been tampered with.
+Our own AnyKey configurator GUI will eventually have a stripped down version of the above avrdude tool to allow security updates to the AnyKey dongle itself that are signed official signed hex files. That way you can't brick your anykey and you can rest assured the firmware hasn't been tampered with.
 
 ## Warning
-When using this first test your lock/unlock procedure with either Serial.print's like done above before actually writing to your eeprom. 
+When using this first in your own device with a custom sketch: first test your lock/unlock procedure with either Serial.print's like done above before actually writing to your eeprom. 
 Once you lock the bootloader down you can't change the application (arduino sketch) anymore until you unlock it (and yes it survives power cycles). 
-So make sure you have a way to toggle lock/unlock in some way. This can be with a button, switch, or like in the example a simple serial message or 
-any elaborate challenge-response or proprietary way you can think off. Basically the anykey_bootloader applies the same versatile way of locking that is done
-with LB1 and LB2 for external programming but using an eeprom byte instead of a fuse.
+So make sure you have a reliable way to toggle lock/unlock in some way. This can be done by reading a button, switch, or like in the example a simple serial message or any elaborate challenge-response or proprietary way you can think off. Basically the anykey_bootloader applies the same versatile way of locking that is done with LB1 and LB2 for external programming but using an eeprom byte instead of a fuse.
 
 Worst case if you do lock yourself out due to some bug you can indeed do a chip erase and then reflash bootloader+sketch (that is debugged 
 or one that leaves pos 1023 at 0xFF ). The cool thing is you see that only way out is erasing the entire chip with an external programmer 
