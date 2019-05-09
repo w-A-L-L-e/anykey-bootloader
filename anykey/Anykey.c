@@ -181,10 +181,12 @@ int main(void)
     if (
           (boot_lock_fuse_bits_get(GET_LOCK_BITS)  == 0xFF) ||
           (boot_lock_fuse_bits_get(GET_LOCK_BITS)  == 0x3F)
-       ){
+       ){ //3F we notice sometimes bits 6,7 which do nothing but are also set and mess up above reading
       blink(); 
-      //boot_lock_bits_set_safe( 0xFC ); // disable programming and reading on external spi!
-      boot_lock_bits_set_safe( 0x3C ); // disable programming and reading on external spi! -> seems like its inverted somehow
+      // boot_lock_bits_set_safe( 0xFC ); // disable programming and reading on external spi!
+      // boot_lock_bits_set( 0xEC ); // lb1, lb2 and also bootloader blb11 (as self programming onto boot won't work anyway due to crash) 
+      //boot_lock_bits_set( 0x3C ); // lb1, lb2 are set here and bits 6,7 are active
+      boot_lock_bits_set( 0xFC ); // lb1, lb2 are set here 
     }
     blink(); 
   }
@@ -647,9 +649,9 @@ void CDC_Task(void)
 	{
 		WriteNextResponseByte(boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS));
 	}
-  // Hint: we just change all read and write Commands here. voila no more avrdude kiddies ;)
-  // but we do that after we validate that current build works and we can flash from within
-  // AnyKey Configurator before we change protocols
+  // Current locking is good enough, especially with the addition of 186 and 185
+  // codes we can stay avrdude/avr109 compatible as well.
+  // we mostly use block writes because of added speed
 	#if !defined(NO_BLOCK_SUPPORT)
 	else if (Command == 'b')
 	{
