@@ -62,7 +62,7 @@ uint16_t TxLEDPulse = 0; // time remaining for Tx LED pulse
 uint16_t RxLEDPulse = 0; // time remaining for Rx LED pulse
 
 /* Bootloader timeout timer */
-#define TIMEOUT_PERIOD	8000
+#define TIMEOUT_PERIOD	16000 // default is 8000
 uint16_t Timeout = 0;
 
 uint16_t bootKey = 0x7777;
@@ -540,6 +540,9 @@ void CDC_Task(void)
 	/* Read in the bootloader command (first byte sent from host) */
 	uint8_t Command = FetchNextCommandByte();
 
+  // E stands for exit bootloader. basically we shouldn't call this
+  // until it's verified to be saved. As the exit call 
+  // makes it exit after half a second we can bump up the TIMEOUT_PERIOD.
 	if (Command == 'E')
 	{
 		/* We nearly run out the bootloader timeout clock, 
