@@ -26,6 +26,8 @@
   in an action of contract, negligence or other tortious action,
   arising out of or in connection with the use or performance of
   this software.
+
+  Copyright 2019 Walter Schreppers: Addition of bootlock EEPROM protection and cleanup sources
 */
 
 /** \file
@@ -33,16 +35,14 @@
  *  Main source file for the CDC class bootloader. This file contains the complete bootloader logic.
  */
 
-#define  INCLUDE_FROM_ANYKEY_C
+#define INCLUDE_FROM_ANYKEY_C
 #include "Anykey.h"
 
 /** Contains the current baud rate and other settings of the first virtual serial port. This must be retained as some
  *  operating systems will not open the port unless the settings can be set successfully.
  */
-static CDC_LineEncoding_t LineEncoding = { .BaudRateBPS = 0,
-                                           .CharFormat  = CDC_LINEENCODING_OneStopBit,
-                                           .ParityType  = CDC_PARITY_None,
-                                           .DataBits    = 8                            };
+static CDC_LineEncoding_t LineEncoding = {
+    .BaudRateBPS = 0, .CharFormat = CDC_LINEENCODING_OneStopBit, .ParityType = CDC_PARITY_None, .DataBits = 8};
 
 /** Current address counter. This stores the current address of the FLASH or EEPROM as set by the host,
  *  and is used when reading or writing to the AVRs memory (either FLASH or EEPROM depending on the issued
@@ -62,7 +62,7 @@ uint16_t TxLEDPulse = 0; // time remaining for Tx LED pulse
 uint16_t RxLEDPulse = 0; // time remaining for Rx LED pulse
 
 /* Bootloader timeout timer */
-#define TIMEOUT_PERIOD	16000 // default is 8000
+#define TIMEOUT_PERIOD 16000 // default is 8000
 uint16_t Timeout = 0;
 
 uint16_t bootKey = 0x7777;
@@ -70,204 +70,196 @@ volatile uint16_t *const bootKeyPtr = (volatile uint16_t *)0x0800;
 
 void StartSketch(void)
 {
-	cli();
-	
-	/* Undo TIMER1 setup and clear the count before running the sketch */
-	TIMSK1 = 0;
-	TCCR1B = 0;
-	TCNT1H = 0;		// 16-bit write to TCNT1 requires high byte be written first
-	TCNT1L = 0;
-	
-	/* Relocate the interrupt vector table to the application section */
-	MCUCR = (1 << IVCE);
-	MCUCR = 0;
+    cli();
 
-	L_LED_OFF();
-	TX_LED_OFF();
-	RX_LED_OFF();
+    /* Undo TIMER1 setup and clear the count before running the sketch */
+    TIMSK1 = 0;
+    TCCR1B = 0;
+    TCNT1H = 0; // 16-bit write to TCNT1 requires high byte be written first
+    TCNT1L = 0;
 
-	/* jump to beginning of application space */
-	__asm__ volatile("jmp 0x0000");
+    /* Relocate the interrupt vector table to the application section */
+    MCUCR = (1 << IVCE);
+    MCUCR = 0;
+
+    L_LED_OFF();
+    TX_LED_OFF();
+    RX_LED_OFF();
+
+    /* jump to beginning of application space */
+    __asm__ volatile("jmp 0x0000");
 }
 
 /*	Breathing animation on L LED indicates bootloader is running */
 uint16_t LLEDPulse;
 void LEDPulse(void)
 {
-	LLEDPulse++;
-	uint8_t p = LLEDPulse >> 8;
-	if (p > 127)
-		p = 254-p;
-	p += p;
-	if (((uint8_t)LLEDPulse) > p)
-		L_LED_OFF();
-	else
-		L_LED_ON();
+    LLEDPulse++;
+    uint8_t p = LLEDPulse >> 8;
+    if (p > 127) p = 254 - p;
+    p += p;
+    if (((uint8_t)LLEDPulse) > p)
+        L_LED_OFF();
+    else
+        L_LED_ON();
 }
 
 /** Main program entry point. This routine configures the hardware required by the bootloader, then continuously
  *  runs the bootloader processing routine until it times out or is instructed to exit.
  */
 
+// hard blink to debug
+void xdelay(int n)
+{
+    for (int j = 1; j < 500; j++)
+        for (int i = 0; i < n; i++) {
 
-//hard blink to debug
-void xdelay(int n){
-  for(int j=1;j<500;j++)
-  for(int i=0;i<n;i++){
-
-    __asm__ volatile(
-      "LDI ZH,0xFF ;Set high byte"  \
-      "LDI ZL,0xFF ;Set low byte"  \
-      "DelayLoop: "\
-      "  SBIW ZL,1 ;subtract one from word " \
-      "  BRNE DelayLoop ;Branch back to DelayLoop unless zero flag was set " \
-      "LDI ZH,0xFF ;Set high byte"  \
-      "LDI ZL,0xFF ;Set low byte"  \
-      "DelayLoop2: "\
-      "  SBIW ZL,1 ;subtract one from word " \
-      "  BRNE DelayLoop2 ;Branch back to DelayLoop unless zero flag was set "
-    );
-
-  }
+            __asm__ volatile("LDI ZH,0xFF ;Set high byte"
+                             "LDI ZL,0xFF ;Set low byte"
+                             "DelayLoop: "
+                             "  SBIW ZL,1 ;subtract one from word "
+                             "  BRNE DelayLoop ;Branch back to DelayLoop unless zero flag was set "
+                             "LDI ZH,0xFF ;Set high byte"
+                             "LDI ZL,0xFF ;Set low byte"
+                             "DelayLoop2: "
+                             "  SBIW ZL,1 ;subtract one from word "
+                             "  BRNE DelayLoop2 ;Branch back to DelayLoop unless zero flag was set ");
+        }
 }
 
-
-void blink(){
-	L_LED_ON();
-  xdelay(1000);
-	L_LED_OFF();
-  xdelay(2000);
+void blink()
+{
+    L_LED_ON();
+    xdelay(1000);
+    L_LED_OFF();
+    xdelay(2000);
 }
 
 int main(void)
 {
-	/* Save the value of the boot key memory before it is overwritten */
-	uint16_t bootKeyPtrVal = *bootKeyPtr;
-	*bootKeyPtr = 0;
+    /* Save the value of the boot key memory before it is overwritten */
+    uint16_t bootKeyPtrVal = *bootKeyPtr;
+    *bootKeyPtr = 0;
 
-	/* Check the reason for the reset so we can act accordingly */
-	uint8_t  mcusr_state = MCUSR;		// store the initial state of the Status register
-	MCUSR = 0;							// clear all reset flags	
+    /* Check the reason for the reset so we can act accordingly */
+    uint8_t mcusr_state = MCUSR; // store the initial state of the Status register
+    MCUSR = 0;                   // clear all reset flags
 
-	/* Watchdog may be configured with a 15 ms period so must disable it before going any further */
-	wdt_disable();
-	
-	if (mcusr_state & (1<<EXTRF)) {
-		// External reset -  we should continue to self-programming mode.
-	} else if ((mcusr_state & (1<<PORF)) && (pgm_read_word(0) != 0xFFFF)) {		
-		// After a power-on reset skip the bootloader and jump straight to sketch 
-		// if one exists.	
-		StartSketch();
-	} else if ((mcusr_state & (1<<WDRF)) && (bootKeyPtrVal != bootKey) && (pgm_read_word(0) != 0xFFFF)) {	
-		// If it looks like an "accidental" watchdog reset then start the sketch.
-		StartSketch();
-	}
+    /* Watchdog may be configured with a 15 ms period so must disable it before going any further */
+    wdt_disable();
 
-	/* Setup hardware required for the bootloader */
-	SetupHardware();
-
-  //setup hardware is needed in order to read from eeprom...
-  int bootlockAddress = 1023;
-  uint8_t bootlockCode = eeprom_read_byte( (uint8_t*)(intptr_t)(bootlockAddress) );
-  if( bootlockCode == 187 ){ // bootkill
-    StartSketch();
-  }
-  if( bootlockCode == 186 ){ // single program
-    eeprom_write_byte( (uint8_t*)(intptr_t)(bootlockAddress), 187 ); // bootkill on next restart
-  }
-  if( bootlockCode == 185 ){ // set lock bits + single program
-    blink(); 
-    eeprom_write_byte( (uint8_t*)(intptr_t)(bootlockAddress), 187 ); // bootkill on next restart
-    if (
-          (boot_lock_fuse_bits_get(GET_LOCK_BITS)  == 0xFF) ||
-          (boot_lock_fuse_bits_get(GET_LOCK_BITS)  == 0x3F)
-       ){ //3F we notice sometimes bits 6,7 which do nothing but are also set and mess up above reading
-      blink(); 
-      // boot_lock_bits_set_safe( 0xFC ); // disable programming and reading on external spi!
-      // boot_lock_bits_set( 0xEC ); // lb1, lb2 and also bootloader blb11 (as self programming onto boot won't work anyway due to crash) 
-      //boot_lock_bits_set( 0x3C ); // lb1, lb2 are set here and bits 6,7 are active
-      boot_lock_bits_set( 0xFC ); // lb1, lb2 are set here 
+    if (mcusr_state & (1 << EXTRF)) {
+        // External reset -  we should continue to self-programming mode.
     }
-    blink(); 
-  }
+    else if ((mcusr_state & (1 << PORF)) && (pgm_read_word(0) != 0xFFFF)) {
+        // After a power-on reset skip the bootloader and jump straight to sketch
+        // if one exists.
+        StartSketch();
+    }
+    else if ((mcusr_state & (1 << WDRF)) && (bootKeyPtrVal != bootKey) && (pgm_read_word(0) != 0xFFFF)) {
+        // If it looks like an "accidental" watchdog reset then start the sketch.
+        StartSketch();
+    }
 
-	
-  // if we start sketch above we don't need usb etc.
-	USB_Init();
+    /* Setup hardware required for the bootloader */
+    SetupHardware();
 
-	/* Enable global interrupts so that the USB stack can function */
-	sei();
-	
-	Timeout = 0;
-	
-	while (RunBootloader)
-	{
-		CDC_Task();
-		USB_USBTask();
-		/* Time out and start the sketch if one is present */
-		if (Timeout > TIMEOUT_PERIOD)
-			RunBootloader = false;
+    // setup hardware is needed in order to read from eeprom...
+    int bootlockAddress = 1023;
+    uint8_t bootlockCode = eeprom_read_byte((uint8_t *)(intptr_t)(bootlockAddress));
+    if (bootlockCode == 187) { // bootkill
+        StartSketch();
+    }
+    if (bootlockCode == 186) {                                          // single program
+        eeprom_write_byte((uint8_t *)(intptr_t)(bootlockAddress), 187); // bootkill on next restart
+    }
+    if (bootlockCode == 185) { // set lock bits + single program
+        blink();
+        eeprom_write_byte((uint8_t *)(intptr_t)(bootlockAddress), 187); // bootkill on next restart
+        if ((boot_lock_fuse_bits_get(GET_LOCK_BITS) == 0xFF) ||
+            (boot_lock_fuse_bits_get(GET_LOCK_BITS) ==
+             0x3F)) { // 3F we notice sometimes bits 6,7 which do nothing but are also set and mess up above reading
+            blink();
+            // boot_lock_bits_set_safe( 0xFC ); // disable programming and reading on external spi!
+            // boot_lock_bits_set( 0xEC ); // lb1, lb2 and also bootloader blb11 (as self programming onto boot won't work anyway due to
+            // crash)
+            // boot_lock_bits_set( 0x3C ); // lb1, lb2 are set here and bits 6,7 are active
+            boot_lock_bits_set(0xFC); // lb1, lb2 are set here
+        }
+        blink();
+    }
 
-		LEDPulse();
-	}
+    // if we start sketch above we don't need usb etc.
+    USB_Init();
 
-	/* Disconnect from the host - USB interface will be reset later along with the AVR */
-	USB_Detach();
+    /* Enable global interrupts so that the USB stack can function */
+    sei();
 
-	/* Jump to beginning of application space to run the sketch - do not reset */	
-	StartSketch();
+    Timeout = 0;
+
+    while (RunBootloader) {
+        CDC_Task();
+        USB_USBTask();
+        /* Time out and start the sketch if one is present */
+        if (Timeout > TIMEOUT_PERIOD) RunBootloader = false;
+
+        LEDPulse();
+    }
+
+    /* Disconnect from the host - USB interface will be reset later along with the AVR */
+    USB_Detach();
+
+    /* Jump to beginning of application space to run the sketch - do not reset */
+    StartSketch();
 }
 
 /** Configures all hardware required for the bootloader. */
 void SetupHardware(void)
 {
-	/* Disable watchdog if enabled by bootloader/fuses */
-	MCUSR &= ~(1 << WDRF);
-	wdt_disable();
+    /* Disable watchdog if enabled by bootloader/fuses */
+    MCUSR &= ~(1 << WDRF);
+    wdt_disable();
 
-	/* Disable clock division */
-	clock_prescale_set(clock_div_1);
+    /* Disable clock division */
+    clock_prescale_set(clock_div_1);
 
-	/* Relocate the interrupt vector table to the bootloader section */
-	MCUCR = (1 << IVCE);
-	MCUCR = (1 << IVSEL);
-	
-	LED_SETUP();
-	CPU_PRESCALE(0); 
-	L_LED_OFF();
-	TX_LED_OFF();
-	RX_LED_OFF();
-	
-	/* Initialize TIMER1 to handle bootloader timeout and LED tasks.  
-	 * With 16 MHz clock and 1/64 prescaler, timer 1 is clocked at 250 kHz
-	 * Our chosen compare match generates an interrupt every 1 ms.
-	 * This interrupt is disabled selectively when doing memory reading, erasing,
-	 * or writing since SPM has tight timing requirements.
-	 */ 
-	OCR1AH = 0;
-	OCR1AL = 250;
-	TIMSK1 = (1 << OCIE1A);					// enable timer 1 output compare A match interrupt
-	TCCR1B = ((1 << CS11) | (1 << CS10));	// 1/64 prescaler on timer 1 input
+    /* Relocate the interrupt vector table to the bootloader section */
+    MCUCR = (1 << IVCE);
+    MCUCR = (1 << IVSEL);
 
-	/* Initialize USB Subsystem */
-	//USB_Init(); we do that later
+    LED_SETUP();
+    CPU_PRESCALE(0);
+    L_LED_OFF();
+    TX_LED_OFF();
+    RX_LED_OFF();
+
+    /* Initialize TIMER1 to handle bootloader timeout and LED tasks.
+     * With 16 MHz clock and 1/64 prescaler, timer 1 is clocked at 250 kHz
+     * Our chosen compare match generates an interrupt every 1 ms.
+     * This interrupt is disabled selectively when doing memory reading, erasing,
+     * or writing since SPM has tight timing requirements.
+     */
+    OCR1AH = 0;
+    OCR1AL = 250;
+    TIMSK1 = (1 << OCIE1A);               // enable timer 1 output compare A match interrupt
+    TCCR1B = ((1 << CS11) | (1 << CS10)); // 1/64 prescaler on timer 1 input
+
+    /* Initialize USB Subsystem */
+    // USB_Init(); we do that later
 }
 
-//uint16_t ctr = 0;
+// uint16_t ctr = 0;
 ISR(TIMER1_COMPA_vect, ISR_BLOCK)
 {
-	/* Reset counter */
-	TCNT1H = 0;
-	TCNT1L = 0;
+    /* Reset counter */
+    TCNT1H = 0;
+    TCNT1L = 0;
 
-	/* Check whether the TX or RX LED one-shot period has elapsed.  if so, turn off the LED */
-	if (TxLEDPulse && !(--TxLEDPulse))
-		TX_LED_OFF();
-	if (RxLEDPulse && !(--RxLEDPulse))
-		RX_LED_OFF();
-	
-	if (pgm_read_word(0) != 0xFFFF)
-		Timeout++;
+    /* Check whether the TX or RX LED one-shot period has elapsed.  if so, turn off the LED */
+    if (TxLEDPulse && !(--TxLEDPulse)) TX_LED_OFF();
+    if (RxLEDPulse && !(--RxLEDPulse)) RX_LED_OFF();
+
+    if (pgm_read_word(0) != 0xFFFF) Timeout++;
 }
 
 /** Event handler for the USB_ConfigurationChanged event. This configures the device's endpoints ready
@@ -275,18 +267,12 @@ ISR(TIMER1_COMPA_vect, ISR_BLOCK)
  */
 void EVENT_USB_Device_ConfigurationChanged(void)
 {
-	/* Setup CDC Notification, Rx and Tx Endpoints */
-	Endpoint_ConfigureEndpoint(CDC_NOTIFICATION_EPNUM, EP_TYPE_INTERRUPT,
-	                           ENDPOINT_DIR_IN, CDC_NOTIFICATION_EPSIZE,
-	                           ENDPOINT_BANK_SINGLE);
+    /* Setup CDC Notification, Rx and Tx Endpoints */
+    Endpoint_ConfigureEndpoint(CDC_NOTIFICATION_EPNUM, EP_TYPE_INTERRUPT, ENDPOINT_DIR_IN, CDC_NOTIFICATION_EPSIZE, ENDPOINT_BANK_SINGLE);
 
-	Endpoint_ConfigureEndpoint(CDC_TX_EPNUM, EP_TYPE_BULK,
-	                           ENDPOINT_DIR_IN, CDC_TXRX_EPSIZE,
-	                           ENDPOINT_BANK_SINGLE);
+    Endpoint_ConfigureEndpoint(CDC_TX_EPNUM, EP_TYPE_BULK, ENDPOINT_DIR_IN, CDC_TXRX_EPSIZE, ENDPOINT_BANK_SINGLE);
 
-	Endpoint_ConfigureEndpoint(CDC_RX_EPNUM, EP_TYPE_BULK,
-	                           ENDPOINT_DIR_OUT, CDC_TXRX_EPSIZE,
-	                           ENDPOINT_BANK_SINGLE);
+    Endpoint_ConfigureEndpoint(CDC_RX_EPNUM, EP_TYPE_BULK, ENDPOINT_DIR_OUT, CDC_TXRX_EPSIZE, ENDPOINT_BANK_SINGLE);
 }
 
 /** Event handler for the USB_ControlRequest event. This is used to catch and process control requests sent to
@@ -295,39 +281,34 @@ void EVENT_USB_Device_ConfigurationChanged(void)
  */
 void EVENT_USB_Device_ControlRequest(void)
 {
-	/* Ignore any requests that aren't directed to the CDC interface */
-	if ((USB_ControlRequest.bmRequestType & (CONTROL_REQTYPE_TYPE | CONTROL_REQTYPE_RECIPIENT)) !=
-	    (REQTYPE_CLASS | REQREC_INTERFACE))
-	{
-		return;
-	}
+    /* Ignore any requests that aren't directed to the CDC interface */
+    if ((USB_ControlRequest.bmRequestType & (CONTROL_REQTYPE_TYPE | CONTROL_REQTYPE_RECIPIENT)) != (REQTYPE_CLASS | REQREC_INTERFACE)) {
+        return;
+    }
 
-	/* Process CDC specific control requests */
-	switch (USB_ControlRequest.bRequest)
-	{
-		case CDC_REQ_GetLineEncoding:
-			if (USB_ControlRequest.bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE))
-			{
-				Endpoint_ClearSETUP();
+    /* Process CDC specific control requests */
+    switch (USB_ControlRequest.bRequest) {
+    case CDC_REQ_GetLineEncoding:
+        if (USB_ControlRequest.bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE)) {
+            Endpoint_ClearSETUP();
 
-				/* Write the line coding data to the control endpoint */
-				Endpoint_Write_Control_Stream_LE(&LineEncoding, sizeof(CDC_LineEncoding_t));
-				Endpoint_ClearOUT();
-			}
+            /* Write the line coding data to the control endpoint */
+            Endpoint_Write_Control_Stream_LE(&LineEncoding, sizeof(CDC_LineEncoding_t));
+            Endpoint_ClearOUT();
+        }
 
-			break;
-		case CDC_REQ_SetLineEncoding:
-			if (USB_ControlRequest.bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE))
-			{
-				Endpoint_ClearSETUP();
+        break;
+    case CDC_REQ_SetLineEncoding:
+        if (USB_ControlRequest.bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE)) {
+            Endpoint_ClearSETUP();
 
-				/* Read the line coding data in from the host into the global struct */
-				Endpoint_Read_Control_Stream_LE(&LineEncoding, sizeof(CDC_LineEncoding_t));
-				Endpoint_ClearIN();
-			}
+            /* Read the line coding data in from the host into the global struct */
+            Endpoint_Read_Control_Stream_LE(&LineEncoding, sizeof(CDC_LineEncoding_t));
+            Endpoint_ClearIN();
+        }
 
-			break;
-	}
+        break;
+    }
 }
 
 #if !defined(NO_BLOCK_SUPPORT)
@@ -338,118 +319,104 @@ void EVENT_USB_Device_ControlRequest(void)
  */
 static void ReadWriteMemoryBlock(const uint8_t Command)
 {
-	uint16_t BlockSize;
-	char     MemoryType;
+    uint16_t BlockSize;
+    char MemoryType;
 
-	bool     HighByte = false;
-	uint8_t  LowByte  = 0;
+    bool HighByte = false;
+    uint8_t LowByte = 0;
 
-	BlockSize  = (FetchNextCommandByte() << 8);
-	BlockSize |=  FetchNextCommandByte();
+    BlockSize = (FetchNextCommandByte() << 8);
+    BlockSize |= FetchNextCommandByte();
 
-	MemoryType =  FetchNextCommandByte();
+    MemoryType = FetchNextCommandByte();
 
-	if ((MemoryType != 'E') && (MemoryType != 'F'))
-	{
-		/* Send error byte back to the host */
-		WriteNextResponseByte('?');
+    if ((MemoryType != 'E') && (MemoryType != 'F')) {
+        /* Send error byte back to the host */
+        WriteNextResponseByte('?');
 
-		return;
-	}
+        return;
+    }
 
-	/* Disable timer 1 interrupt - can't afford to process nonessential interrupts
-	 * while doing SPM tasks */
-	TIMSK1 = 0;
+    /* Disable timer 1 interrupt - can't afford to process nonessential interrupts
+     * while doing SPM tasks */
+    TIMSK1 = 0;
 
-	/* Check if command is to read memory */
-	if (Command == 'g')
-	{		
-		/* Re-enable RWW section */
-		boot_rww_enable();
+    /* Check if command is to read memory */
+    if (Command == 'g') {
+        /* Re-enable RWW section */
+        boot_rww_enable();
 
-		while (BlockSize--)
-		{
-			if (MemoryType == 'F')
-			{
-				/* Read the next FLASH byte from the current FLASH page */
-				#if (FLASHEND > 0xFFFF)
-				WriteNextResponseByte(pgm_read_byte_far(CurrAddress | HighByte));
-				#else
-				WriteNextResponseByte(pgm_read_byte(CurrAddress | HighByte));
-				#endif
+        while (BlockSize--) {
+            if (MemoryType == 'F') {
+/* Read the next FLASH byte from the current FLASH page */
+#if (FLASHEND > 0xFFFF)
+                WriteNextResponseByte(pgm_read_byte_far(CurrAddress | HighByte));
+#else
+                WriteNextResponseByte(pgm_read_byte(CurrAddress | HighByte));
+#endif
 
-				/* If both bytes in current word have been read, increment the address counter */
-				if (HighByte)
-				  CurrAddress += 2;
+                /* If both bytes in current word have been read, increment the address counter */
+                if (HighByte) CurrAddress += 2;
 
-				HighByte = !HighByte;
-			}
-			else
-			{
-				/* Read the next EEPROM byte into the endpoint */
-				WriteNextResponseByte(eeprom_read_byte((uint8_t*)(intptr_t)(CurrAddress >> 1)));
+                HighByte = !HighByte;
+            }
+            else {
+                /* Read the next EEPROM byte into the endpoint */
+                WriteNextResponseByte(eeprom_read_byte((uint8_t *)(intptr_t)(CurrAddress >> 1)));
 
-				/* Increment the address counter after use */
-				CurrAddress += 2;
-			}
-		}
-	}
-	else
-	{
-		uint32_t PageStartAddress = CurrAddress;
+                /* Increment the address counter after use */
+                CurrAddress += 2;
+            }
+        }
+    }
+    else {
+        uint32_t PageStartAddress = CurrAddress;
 
-		if (MemoryType == 'F')
-		{
-			boot_page_erase(PageStartAddress);
-			boot_spm_busy_wait();
-		}
+        if (MemoryType == 'F') {
+            boot_page_erase(PageStartAddress);
+            boot_spm_busy_wait();
+        }
 
-		while (BlockSize--)
-		{
-			if (MemoryType == 'F')
-			{
-				/* If both bytes in current word have been written, increment the address counter */
-				if (HighByte)
-				{
-					/* Write the next FLASH word to the current FLASH page */
-					boot_page_fill(CurrAddress, ((FetchNextCommandByte() << 8) | LowByte));
+        while (BlockSize--) {
+            if (MemoryType == 'F') {
+                /* If both bytes in current word have been written, increment the address counter */
+                if (HighByte) {
+                    /* Write the next FLASH word to the current FLASH page */
+                    boot_page_fill(CurrAddress, ((FetchNextCommandByte() << 8) | LowByte));
 
-					/* Increment the address counter after use */
-					CurrAddress += 2;
-				}
-				else
-				{
-					LowByte = FetchNextCommandByte();
-				}
-				
-				HighByte = !HighByte;
-			}
-			else
-			{
-				/* Write the next EEPROM byte from the endpoint */
-				eeprom_write_byte((uint8_t*)((intptr_t)(CurrAddress >> 1)), FetchNextCommandByte());
+                    /* Increment the address counter after use */
+                    CurrAddress += 2;
+                }
+                else {
+                    LowByte = FetchNextCommandByte();
+                }
 
-				/* Increment the address counter after use */
-				CurrAddress += 2;
-			}
-		}
+                HighByte = !HighByte;
+            }
+            else {
+                /* Write the next EEPROM byte from the endpoint */
+                eeprom_write_byte((uint8_t *)((intptr_t)(CurrAddress >> 1)), FetchNextCommandByte());
 
-		/* If in FLASH programming mode, commit the page after writing */
-		if (MemoryType == 'F')
-		{
-			/* Commit the flash page to memory */
-			boot_page_write(PageStartAddress);
+                /* Increment the address counter after use */
+                CurrAddress += 2;
+            }
+        }
 
-			/* Wait until write operation has completed */
-			boot_spm_busy_wait();
-		}
+        /* If in FLASH programming mode, commit the page after writing */
+        if (MemoryType == 'F') {
+            /* Commit the flash page to memory */
+            boot_page_write(PageStartAddress);
 
-		/* Send response byte back to the host */
-		WriteNextResponseByte('\r');
-	}
+            /* Wait until write operation has completed */
+            boot_spm_busy_wait();
+        }
 
-	/* Re-enable timer 1 interrupt disabled earlier in this routine */	
-	TIMSK1 = (1 << OCIE1A);
+        /* Send response byte back to the host */
+        WriteNextResponseByte('\r');
+    }
+
+    /* Re-enable timer 1 interrupt disabled earlier in this routine */
+    TIMSK1 = (1 << OCIE1A);
 }
 #endif
 
@@ -460,23 +427,20 @@ static void ReadWriteMemoryBlock(const uint8_t Command)
  */
 static uint8_t FetchNextCommandByte(void)
 {
-	/* Select the OUT endpoint so that the next data byte can be read */
-	Endpoint_SelectEndpoint(CDC_RX_EPNUM);
+    /* Select the OUT endpoint so that the next data byte can be read */
+    Endpoint_SelectEndpoint(CDC_RX_EPNUM);
 
-	/* If OUT endpoint empty, clear it and wait for the next packet from the host */
-	while (!(Endpoint_IsReadWriteAllowed()))
-	{
-		Endpoint_ClearOUT();
+    /* If OUT endpoint empty, clear it and wait for the next packet from the host */
+    while (!(Endpoint_IsReadWriteAllowed())) {
+        Endpoint_ClearOUT();
 
-		while (!(Endpoint_IsOUTReceived()))
-		{
-			if (USB_DeviceState == DEVICE_STATE_Unattached)
-			  return 0;
-		}
-	}
+        while (!(Endpoint_IsOUTReceived())) {
+            if (USB_DeviceState == DEVICE_STATE_Unattached) return 0;
+        }
+    }
 
-	/* Fetch the next byte from the OUT endpoint */
-	return Endpoint_Read_8();
+    /* Fetch the next byte from the OUT endpoint */
+    return Endpoint_Read_8();
 }
 
 /** Writes the next response byte to the CDC data IN endpoint, and sends the endpoint back if needed to free up the
@@ -486,295 +450,258 @@ static uint8_t FetchNextCommandByte(void)
  */
 static void WriteNextResponseByte(const uint8_t Response)
 {
-	/* Select the IN endpoint so that the next data byte can be written */
-	Endpoint_SelectEndpoint(CDC_TX_EPNUM);
+    /* Select the IN endpoint so that the next data byte can be written */
+    Endpoint_SelectEndpoint(CDC_TX_EPNUM);
 
-	/* If IN endpoint full, clear it and wait until ready for the next packet to the host */
-	if (!(Endpoint_IsReadWriteAllowed()))
-	{
-		Endpoint_ClearIN();
+    /* If IN endpoint full, clear it and wait until ready for the next packet to the host */
+    if (!(Endpoint_IsReadWriteAllowed())) {
+        Endpoint_ClearIN();
 
-		while (!(Endpoint_IsINReady()))
-		{
-			if (USB_DeviceState == DEVICE_STATE_Unattached)
-			  return;
-		}
-	}
+        while (!(Endpoint_IsINReady())) {
+            if (USB_DeviceState == DEVICE_STATE_Unattached) return;
+        }
+    }
 
-	/* Write the next byte to the IN endpoint */
-	Endpoint_Write_8(Response);
-	
-	TX_LED_ON();
-	TxLEDPulse = TX_RX_LED_PULSE_PERIOD;
+    /* Write the next byte to the IN endpoint */
+    Endpoint_Write_8(Response);
+
+    TX_LED_ON();
+    TxLEDPulse = TX_RX_LED_PULSE_PERIOD;
 }
 
-#define STK_OK              0x10
-#define STK_INSYNC          0x14  // ' '
-#define CRC_EOP             0x20  // 'SPACE'
-#define STK_GET_SYNC        0x30  // '0'
+#define STK_OK 0x10
+#define STK_INSYNC 0x14   // ' '
+#define CRC_EOP 0x20      // 'SPACE'
+#define STK_GET_SYNC 0x30 // '0'
 
-#define STK_GET_PARAMETER   0x41  // 'A'
-#define STK_SET_DEVICE      0x42  // 'B'
-#define STK_SET_DEVICE_EXT  0x45  // 'E'
-#define STK_LOAD_ADDRESS    0x55  // 'U'
-#define STK_UNIVERSAL       0x56  // 'V'
-#define STK_PROG_PAGE       0x64  // 'd'
-#define STK_READ_PAGE       0x74  // 't'
-#define STK_READ_SIGN       0x75  // 'u'
+#define STK_GET_PARAMETER 0x41  // 'A'
+#define STK_SET_DEVICE 0x42     // 'B'
+#define STK_SET_DEVICE_EXT 0x45 // 'E'
+#define STK_LOAD_ADDRESS 0x55   // 'U'
+#define STK_UNIVERSAL 0x56      // 'V'
+#define STK_PROG_PAGE 0x64      // 'd'
+#define STK_READ_PAGE 0x74      // 't'
+#define STK_READ_SIGN 0x75      // 'u'
 
 /** Task to read in AVR910 commands from the CDC data OUT endpoint, process them, perform the required actions
  *  and send the appropriate response back to the host.
  */
 void CDC_Task(void)
 {
-	/* Select the OUT endpoint */
-	Endpoint_SelectEndpoint(CDC_RX_EPNUM);
+    /* Select the OUT endpoint */
+    Endpoint_SelectEndpoint(CDC_RX_EPNUM);
 
-	/* Check if endpoint has a command in it sent from the host */
-	if (!(Endpoint_IsOUTReceived()))
-	  return;
-	  
-	RX_LED_ON();
-	RxLEDPulse = TX_RX_LED_PULSE_PERIOD;
+    /* Check if endpoint has a command in it sent from the host */
+    if (!(Endpoint_IsOUTReceived())) return;
 
-	/* Read in the bootloader command (first byte sent from host) */
-	uint8_t Command = FetchNextCommandByte();
+    RX_LED_ON();
+    RxLEDPulse = TX_RX_LED_PULSE_PERIOD;
 
-  // E stands for exit bootloader. basically we shouldn't call this
-  // until it's verified to be saved. As the exit call 
-  // makes it exit after half a second we can bump up the TIMEOUT_PERIOD.
-	if (Command == 'E')
-	{
-		/* We nearly run out the bootloader timeout clock, 
-		* leaving just a few hundred milliseconds so the 
-		* bootloder has time to respond and service any 
-		* subsequent requests */
-		Timeout = TIMEOUT_PERIOD - 500;
-	
-		/* Re-enable RWW section - must be done here in case 
-		 * user has disabled verification on upload.  */
-		boot_rww_enable_safe();		
+    /* Read in the bootloader command (first byte sent from host) */
+    uint8_t Command = FetchNextCommandByte();
 
-		// Send confirmation byte back to the host 
-		WriteNextResponseByte('\r');
-	}
-	else if (Command == 'T')
-	{
-		FetchNextCommandByte();
+    // E stands for exit bootloader. basically we shouldn't call this
+    // until it's verified to be saved. As the exit call
+    // makes it exit after half a second we can bump up the TIMEOUT_PERIOD.
+    if (Command == 'E') {
+        /* We nearly run out the bootloader timeout clock,
+         * leaving just a few hundred milliseconds so the
+         * bootloder has time to respond and service any
+         * subsequent requests */
+        Timeout = TIMEOUT_PERIOD - 500;
 
-		// Send confirmation byte back to the host 
-		WriteNextResponseByte('\r');
-	}
-	else if ((Command == 'L') || (Command == 'P'))
-	{
-		// Send confirmation byte back to the host 
-		WriteNextResponseByte('\r');
-	}
-	else if (Command == 't')
-	{
-		// Return ATMEGA128 part code - this is only to allow AVRProg to use the bootloader 
-		WriteNextResponseByte(0x44);
-		WriteNextResponseByte(0x00);
-	}
-	else if (Command == 'a')
-	{
-		// Indicate auto-address increment is supported 
-		WriteNextResponseByte('Y');
-	}
-	else if (Command == 'A')
-	{
-		// Set the current address to that given by the host 
-		CurrAddress   = (FetchNextCommandByte() << 9);
-		CurrAddress  |= (FetchNextCommandByte() << 1);
+        /* Re-enable RWW section - must be done here in case
+         * user has disabled verification on upload.  */
+        boot_rww_enable_safe();
 
-		// Send confirmation byte back to the host 
-		WriteNextResponseByte('\r');
-	}
-	else if (Command == 'p')
-	{
-		// Indicate serial programmer back to the host 
-		WriteNextResponseByte('S');
-	}
-	else if (Command == 'S')
-	{
-		// Write the 7-byte software identifier to the endpoint 
-		for (uint8_t CurrByte = 0; CurrByte < 7; CurrByte++)
-		  WriteNextResponseByte(SOFTWARE_IDENTIFIER[CurrByte]);
-	}
-	else if (Command == 'V')
-	{
-		WriteNextResponseByte('0' + BOOTLOADER_VERSION_MAJOR);
-		WriteNextResponseByte('0' + BOOTLOADER_VERSION_MINOR);
-	}
-	else if (Command == 's')
-	{
-		WriteNextResponseByte(AVR_SIGNATURE_3);
-		WriteNextResponseByte(AVR_SIGNATURE_2);
-		WriteNextResponseByte(AVR_SIGNATURE_1);
-	}
-	else if (Command == 'e')
-	{
-		// Clear the application section of flash 
-		for (uint32_t CurrFlashAddress = 0; CurrFlashAddress < BOOT_START_ADDR; CurrFlashAddress += SPM_PAGESIZE)
-		{
-			boot_page_erase(CurrFlashAddress);
-			boot_spm_busy_wait();
-			boot_page_write(CurrFlashAddress);
-			boot_spm_busy_wait();
-		}
+        // Send confirmation byte back to the host
+        WriteNextResponseByte('\r');
+    }
+    else if (Command == 'T') {
+        FetchNextCommandByte();
 
-		// Send confirmation byte back to the host 
-		WriteNextResponseByte('\r');
-	}
-	#if !defined(NO_LOCK_BYTE_WRITE_SUPPORT)
-	else if (Command == 'l')
-	{
-		// Set the lock bits to those given by the host 
-		boot_lock_bits_set(FetchNextCommandByte());
+        // Send confirmation byte back to the host
+        WriteNextResponseByte('\r');
+    }
+    else if ((Command == 'L') || (Command == 'P')) {
+        // Send confirmation byte back to the host
+        WriteNextResponseByte('\r');
+    }
+    else if (Command == 't') {
+        // Return ATMEGA128 part code - this is only to allow AVRProg to use the bootloader
+        WriteNextResponseByte(0x44);
+        WriteNextResponseByte(0x00);
+    }
+    else if (Command == 'a') {
+        // Indicate auto-address increment is supported
+        WriteNextResponseByte('Y');
+    }
+    else if (Command == 'A') {
+        // Set the current address to that given by the host
+        CurrAddress = (FetchNextCommandByte() << 9);
+        CurrAddress |= (FetchNextCommandByte() << 1);
 
-		// Send confirmation byte back to the host 
-		WriteNextResponseByte('\r');
-	}
-	#endif
-	else if (Command == 'r')
-	{
-		WriteNextResponseByte(boot_lock_fuse_bits_get(GET_LOCK_BITS));
-	}
-	else if (Command == 'F')
-	{
-		WriteNextResponseByte(boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS));
-	}
-	else if (Command == 'N')
-	{
-		WriteNextResponseByte(boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS));
-	}
-	else if (Command == 'Q')
-	{
-		WriteNextResponseByte(boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS));
-	}
-  // Current locking is good enough, especially with the addition of 186 and 185
-  // codes we can stay avrdude/avr109 compatible as well.
-  // we mostly use block writes because of added speed
-	#if !defined(NO_BLOCK_SUPPORT)
-	else if (Command == 'b')
-	{
-		WriteNextResponseByte('Y');
+        // Send confirmation byte back to the host
+        WriteNextResponseByte('\r');
+    }
+    else if (Command == 'p') {
+        // Indicate serial programmer back to the host
+        WriteNextResponseByte('S');
+    }
+    else if (Command == 'S') {
+        // Write the 7-byte software identifier to the endpoint
+        for (uint8_t CurrByte = 0; CurrByte < 7; CurrByte++)
+            WriteNextResponseByte(SOFTWARE_IDENTIFIER[CurrByte]);
+    }
+    else if (Command == 'V') {
+        WriteNextResponseByte('0' + BOOTLOADER_VERSION_MAJOR);
+        WriteNextResponseByte('0' + BOOTLOADER_VERSION_MINOR);
+    }
+    else if (Command == 's') {
+        WriteNextResponseByte(AVR_SIGNATURE_3);
+        WriteNextResponseByte(AVR_SIGNATURE_2);
+        WriteNextResponseByte(AVR_SIGNATURE_1);
+    }
+    else if (Command == 'e') {
+        // Clear the application section of flash
+        for (uint32_t CurrFlashAddress = 0; CurrFlashAddress < BOOT_START_ADDR; CurrFlashAddress += SPM_PAGESIZE) {
+            boot_page_erase(CurrFlashAddress);
+            boot_spm_busy_wait();
+            boot_page_write(CurrFlashAddress);
+            boot_spm_busy_wait();
+        }
 
-		// Send block size to the host 
-		WriteNextResponseByte(SPM_PAGESIZE >> 8);
-		WriteNextResponseByte(SPM_PAGESIZE & 0xFF);
-	}
-	else if ((Command == 'B') || (Command == 'g'))
-	{
-		// Keep resetting the timeout counter if we're receiving self-programming instructions
-		Timeout = 0;
-		// Delegate the block write/read to a separate function for clarity 
-		ReadWriteMemoryBlock(Command);
-	}
-	#endif
-	#if !defined(NO_FLASH_BYTE_SUPPORT)
-	else if (Command == 'C')
-	{
-		// Write the high byte to the current flash page
-		boot_page_fill(CurrAddress, FetchNextCommandByte());
+        // Send confirmation byte back to the host
+        WriteNextResponseByte('\r');
+    }
+#if !defined(NO_LOCK_BYTE_WRITE_SUPPORT)
+    else if (Command == 'l') {
+        // Set the lock bits to those given by the host
+        boot_lock_bits_set(FetchNextCommandByte());
 
-		// Send confirmation byte back to the host 
-		WriteNextResponseByte('\r');
-	}
-	else if (Command == 'c')
-	{
-		// Write the low byte to the current flash page 
-		boot_page_fill(CurrAddress | 0x01, FetchNextCommandByte());
+        // Send confirmation byte back to the host
+        WriteNextResponseByte('\r');
+    }
+#endif
+    else if (Command == 'r') {
+        WriteNextResponseByte(boot_lock_fuse_bits_get(GET_LOCK_BITS));
+    }
+    else if (Command == 'F') {
+        WriteNextResponseByte(boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS));
+    }
+    else if (Command == 'N') {
+        WriteNextResponseByte(boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS));
+    }
+    else if (Command == 'Q') {
+        WriteNextResponseByte(boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS));
+    }
+    // Current locking is good enough, especially with the addition of 186 and 185
+    // codes we can stay avrdude/avr109 compatible as well.
+    // we mostly use block writes because of added speed
+#if !defined(NO_BLOCK_SUPPORT)
+    else if (Command == 'b') {
+        WriteNextResponseByte('Y');
 
-		// Increment the address 
-		CurrAddress += 2;
+        // Send block size to the host
+        WriteNextResponseByte(SPM_PAGESIZE >> 8);
+        WriteNextResponseByte(SPM_PAGESIZE & 0xFF);
+    }
+    else if ((Command == 'B') || (Command == 'g')) {
+        // Keep resetting the timeout counter if we're receiving self-programming instructions
+        Timeout = 0;
+        // Delegate the block write/read to a separate function for clarity
+        ReadWriteMemoryBlock(Command);
+    }
+#endif
+#if !defined(NO_FLASH_BYTE_SUPPORT)
+    else if (Command == 'C') {
+        // Write the high byte to the current flash page
+        boot_page_fill(CurrAddress, FetchNextCommandByte());
 
-		// Send confirmation byte back to the host 
-		WriteNextResponseByte('\r');
-	}
-	else if (Command == 'm')
-	{
-		// Commit the flash page to memory
-		boot_page_write(CurrAddress);
+        // Send confirmation byte back to the host
+        WriteNextResponseByte('\r');
+    }
+    else if (Command == 'c') {
+        // Write the low byte to the current flash page
+        boot_page_fill(CurrAddress | 0x01, FetchNextCommandByte());
 
-		// Wait until write operation has completed 
-		boot_spm_busy_wait();
+        // Increment the address
+        CurrAddress += 2;
 
-		// Send confirmation byte back to the host 
-		WriteNextResponseByte('\r');
-	}
-	else if (Command == 'R')
-	{
-		#if (FLASHEND > 0xFFFF)
-		uint16_t ProgramWord = pgm_read_word_far(CurrAddress);
-		#else
-		uint16_t ProgramWord = pgm_read_word(CurrAddress);
-		#endif
+        // Send confirmation byte back to the host
+        WriteNextResponseByte('\r');
+    }
+    else if (Command == 'm') {
+        // Commit the flash page to memory
+        boot_page_write(CurrAddress);
 
-		WriteNextResponseByte(ProgramWord >> 8);
-		WriteNextResponseByte(ProgramWord & 0xFF);
-	}
-	#endif
-	#if !defined(NO_EEPROM_BYTE_SUPPORT)
-	else if (Command == 'D')
-	{
-		// Read the byte from the endpoint and write it to the EEPROM 
-		eeprom_write_byte((uint8_t*)((intptr_t)(CurrAddress >> 1)), FetchNextCommandByte());
+        // Wait until write operation has completed
+        boot_spm_busy_wait();
 
-		// Increment the address after use
-		CurrAddress += 2;
+        // Send confirmation byte back to the host
+        WriteNextResponseByte('\r');
+    }
+    else if (Command == 'R') {
+#if (FLASHEND > 0xFFFF)
+        uint16_t ProgramWord = pgm_read_word_far(CurrAddress);
+#else
+        uint16_t ProgramWord = pgm_read_word(CurrAddress);
+#endif
 
-		// Send confirmation byte back to the host 
-		WriteNextResponseByte('\r');
-	}
-	else if (Command == 'd')
-	{
-		// Read the EEPROM byte and write it to the endpoint 
-		WriteNextResponseByte(eeprom_read_byte((uint8_t*)((intptr_t)(CurrAddress >> 1))));
+        WriteNextResponseByte(ProgramWord >> 8);
+        WriteNextResponseByte(ProgramWord & 0xFF);
+    }
+#endif
+#if !defined(NO_EEPROM_BYTE_SUPPORT)
+    else if (Command == 'D') {
+        // Read the byte from the endpoint and write it to the EEPROM
+        eeprom_write_byte((uint8_t *)((intptr_t)(CurrAddress >> 1)), FetchNextCommandByte());
 
-		// Increment the address after use 
-		CurrAddress += 2;
-	}
-	#endif
-	else if (Command != 27)
-	{
-		// Unknown (non-sync) command, return fail code 
-		WriteNextResponseByte('?');
-	}
-	
+        // Increment the address after use
+        CurrAddress += 2;
 
-	/* Select the IN endpoint */
-	Endpoint_SelectEndpoint(CDC_TX_EPNUM);
+        // Send confirmation byte back to the host
+        WriteNextResponseByte('\r');
+    }
+    else if (Command == 'd') {
+        // Read the EEPROM byte and write it to the endpoint
+        WriteNextResponseByte(eeprom_read_byte((uint8_t *)((intptr_t)(CurrAddress >> 1))));
 
-	/* Remember if the endpoint is completely full before clearing it */
-	bool IsEndpointFull = !(Endpoint_IsReadWriteAllowed());
+        // Increment the address after use
+        CurrAddress += 2;
+    }
+#endif
+    else if (Command != 27) {
+        // Unknown (non-sync) command, return fail code
+        WriteNextResponseByte('?');
+    }
 
-	/* Send the endpoint data to the host */
-	Endpoint_ClearIN();
+    /* Select the IN endpoint */
+    Endpoint_SelectEndpoint(CDC_TX_EPNUM);
 
-	/* If a full endpoint's worth of data was sent, we need to send an empty packet afterwards to signal end of transfer */
-	if (IsEndpointFull)
-	{
-		while (!(Endpoint_IsINReady()))
-		{
-			if (USB_DeviceState == DEVICE_STATE_Unattached)
-			  return;
-		}
+    /* Remember if the endpoint is completely full before clearing it */
+    bool IsEndpointFull = !(Endpoint_IsReadWriteAllowed());
 
-		Endpoint_ClearIN();
-	}
+    /* Send the endpoint data to the host */
+    Endpoint_ClearIN();
 
-	/* Wait until the data has been sent to the host */
-	while (!(Endpoint_IsINReady()))
-	{
-		if (USB_DeviceState == DEVICE_STATE_Unattached)
-		  return;
-	}
+    /* If a full endpoint's worth of data was sent, we need to send an empty packet afterwards to signal end of transfer */
+    if (IsEndpointFull) {
+        while (!(Endpoint_IsINReady())) {
+            if (USB_DeviceState == DEVICE_STATE_Unattached) return;
+        }
 
-	/* Select the OUT endpoint */
-	Endpoint_SelectEndpoint(CDC_RX_EPNUM);
+        Endpoint_ClearIN();
+    }
 
-	/* Acknowledge the command from the host */
-	Endpoint_ClearOUT();
+    /* Wait until the data has been sent to the host */
+    while (!(Endpoint_IsINReady())) {
+        if (USB_DeviceState == DEVICE_STATE_Unattached) return;
+    }
+
+    /* Select the OUT endpoint */
+    Endpoint_SelectEndpoint(CDC_RX_EPNUM);
+
+    /* Acknowledge the command from the host */
+    Endpoint_ClearOUT();
 }
-
