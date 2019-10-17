@@ -298,6 +298,17 @@ void EVENT_USB_Device_ControlRequest(void)
         }
 
         break;
+
+    /* patch/fix for mac os Catalina that fails on baudrate change */
+    case CDC_REQ_SetControlLineState:
+            if (USB_ControlRequest.bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE))
+            {
+                    Endpoint_ClearSETUP();
+                    Endpoint_ClearStatusStage();
+            }
+
+            break;
+
     case CDC_REQ_SetLineEncoding:
         if (USB_ControlRequest.bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE)) {
             Endpoint_ClearSETUP();
