@@ -20,7 +20,7 @@ anykey.bootloader.tool=avrdude
 anykey.bootloader.low_fuses=0xff
 anykey.bootloader.high_fuses=0xd8
 anykey.bootloader.extended_fuses=0xcb
-anykey.bootloader.file=caterina/Caterina-Leonardo.hex
+anykey.bootloader.file=anykey/anykey_bootloader.hex
 anykey.bootloader.unlock_bits=0x3F
 anykey.bootloader.lock_bits=0x2F
 
