@@ -141,7 +141,7 @@
 // Configure the baud rate:
 
 #define BAUDRATE	19200
-//#define BAUDRATE 57600
+// #define BAUDRATE 57600
 //#define BAUDRATE	115200
 // #define BAUDRATE	1000000
 
@@ -648,15 +648,16 @@ void read_signature() {
 ////////////////////////////////////
 void avrisp() {
   uint8_t ch = getch();
+  
   switch (ch) {
     case 'X':
       SERIAL.print("Unlocking bootloader...");
-      eeprom_update_byte ( 1023, 255 ); //0xFF regular bootloader reloaded
+      eeprom_update_byte ( (uint8_t*)1023, 0xFF ); // enable_bootloader 255
       SERIAL.println("done");
       break;
     case 'L':
       SERIAL.print("Locking bootloader...");
-      eeprom_update_byte ( 1023, 187 ); //187 we murder the bootloader ;)
+      eeprom_update_byte ( (uint8_t*)1023, 0xBB ); // disable_bootloader 187
       SERIAL.println("done");
       break;
     case '0': // signon
